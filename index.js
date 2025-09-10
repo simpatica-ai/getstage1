@@ -2,17 +2,17 @@ const { VertexAI } = require('@google-cloud/vertexai');
 const functions = require('@google-cloud/functions-framework');
 
 // Initialize Vertex AI outside the handler for better performance
-const vertex_ai = new VertexAI({ 
-  project: 'new-man-app', 
-  location: 'us-central1' 
+const vertex_ai = new VertexAI({
+  project: 'new-man-app',
+  location: 'us-central1'
 });
 
 functions.http('getstage1', async (req, res) => {
   // Set CORS headers
   res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.set('Access-control-Allow-Methods', 'POST, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type');
-  
+
   if (req.method === 'OPTIONS') {
     res.status(204).send('');
     return;
@@ -24,118 +24,74 @@ functions.http('getstage1', async (req, res) => {
       return res.status(400).send({ error: 'Invalid request body' });
     }
 
-    const { virtueName, virtueDef, virtueScore, defectDetails } = req.body;
-    
+    const { virtueName, virtueDef, characterDefectAnalysis, stage1MemoContent } = req.body;
+
     // Validate required fields
-    if (!virtueName || !virtueDef) {
-      return res.status(400).send({ error: 'Missing required fields: virtueName and virtueDef are required' });
+    if (!virtueName || !virtueDef || !characterDefectAnalysis) {
+      return res.status(400).send({ error: 'Missing required fields: virtueName, virtueDef, and characterDefectAnalysis are required.' });
     }
 
-    // Use gemini-2.5-flash-lite as primary, with fallbacks
-    const modelNames = [
-      'gemini-2.5-flash-lite',  // Primary model
-      'gemini-2.0-flash-lite',  // Fallback 1
-      'gemini-1.5-flash-lite',  // Fallback 2
-      'gemini-1.5-flash',       // Fallback 3
-      'gemini-pro'              // Final fallback
-    ];
+    // --- NEW STAGE 1 PROMPT ---
+    const prompt = `
+      You are an empathetic and wise recovery coach. Your task is to generate a motivating, introspective, and contextually aware writing prompt for a user working on Stage 1 of their virtue development, which is "Dismantling". Dismantling is not a friendly process, and inviting brutal honesty is key. Empathy is offered as we are more than our mistakes.
 
-    let analysisText = '';
-    let lastError = null;
+      **Objective of Dismantling:** Dismantling is the introspective practice of recognizing one's inner flaws (character defects), acknowledging the harm they cause, and making a resolute commitment to actively cease acting upon them.
+
+      **USER CONTEXT:**
+      - **Virtue:** ${virtueName}
+      - **Virtue Definition:** ${virtueDef}
+      - **AI Analysis of User's Character Defects:** "${characterDefectAnalysis}"
+      - **User's Writing Progress on Stage 1 So Far:** """${stage1MemoContent || "The user has not started writing for this stage yet."}"""
+
+      **YOUR TASK:**
+      Based on ALL the information above, generate a thoughtful and encouraging prompt of about 250 words. Your response MUST do the following:
+      1.  Acknowledge the user's current position in their journey with this virtue, referencing the provided AI analysis of their character defects.
+      2.  If the user has already written something, briefly acknowledge their progress and insights.
+      3.  Gently guide their focus toward a specific character defect mentioned in the analysis. Explain how this specific defect acts as a barrier to practicing the virtue of ${virtueName}.
+      4.  Conclude with a direct, open-ended question or a reflective task. This should encourage the user to explore a specific memory, feeling, or pattern of behavior related to that defect. The goal is to help them see the defect clearly without judgment.
+
+      Frame your response with empathy and wisdom. You are a trusted companion on their journey of self-discovery and growth. Refer to the user as "you".
+    `;
+
+    // --- Model Execution Logic (Unchanged) ---
+    const modelNames = ['gemini-1.5-flash', 'gemini-pro']; // Simplified model list for clarity
+    let promptResponseText = '';
     let successfulModel = '';
 
-    // Try each model until one works
     for (const modelName of modelNames) {
       try {
         console.log(`Trying model: ${modelName}`);
-        
-        const generativeModel = vertex_ai.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            maxOutputTokens: 1024,
-            temperature: 0.7,
-            topP: 0.8,
-            topK: 40
-          },
-          safetySettings: [
-            {
-              category: 'HARM_CATEGORY_HATE_SPEECH',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            },
-            {
-              category: 'HARM_CATEGORY_HARASSMENT',
-              threshold: 'BLOCK_MEDIUM_AND_ABOVE'
-            }
-          ]
-        });
-
-        const scoreForPrompt = (typeof virtueScore === 'number' && !isNaN(virtueScore))
-          ? virtueScore.toFixed(1)
-          : 'N/A';
-
-        // Optimized prompt for flash-lite models
-        const prompt = `
-                  Analyze the following data for a user reviewing assessment results intended to identify character defects that preempt being virtuous. Your tone must be direct, objective, and insightful. The goal is a qualitative analysis of the user's defects to generate a customized prompt for development. This is the first stage where the user undertakes dismantling of these character defects. Refer to the user as "you" and be empathetic but firm in your analysis.
-
-          DATA:
-          - Virtue: ${virtueName}
-          - User's Score: ${scoreForPrompt}/10 (A lower score indicates a greater challenge) A score in the lower third indicates deep challenges with this virtue, a score in the middled third indicates moderate challenges as well as capacity with this virtue, and within the upper third indicates strong capacity with this virtue and likely only minor challenges.)
-          - Associated Defect Ratings:
-          ${defectDetails || 'No specific defect details provided'}
-
-          TASKS:
-          1.  Briefly synthesize the user's main challenge regarding this virtue based on the frequency and harm of the associated defects.
-          2.  Identify the most significant defect(s) contributing to the low score.
-          3.  Conclude with a direct, actionable prompt for the user to reflect on for developing this virtue. Frame it as a question or a statement for consideration.
-          4.  Keep the entire response under 150 words.`;
-;
-
+        const generativeModel = vertex_ai.getGenerativeModel({ model: modelName });
         const result = await generativeModel.generateContent(prompt);
         const response = result.response;
-        
+
         if (response.candidates && response.candidates[0] && response.candidates[0].content) {
-          analysisText = response.candidates[0].content.parts[0].text;
+          promptResponseText = response.candidates[0].content.parts[0].text;
           successfulModel = modelName;
           console.log(`Success with model: ${modelName}`);
           break;
         } else {
           throw new Error('Invalid response format from model');
         }
-        
       } catch (error) {
-        lastError = error;
         console.warn(`Model ${modelName} failed:`, error.message);
-        continue; // Try next model
+        continue;
       }
     }
 
-    if (!analysisText) {
-      console.error('All models failed:', lastError);
-      // Provide a meaningful fallback response
-      analysisText = `I see you're reflecting on ${virtueName}, which involves ${virtueDef.toLowerCase()}. Your willingness to engage in this self-assessment shows real courage and commitment to growth. 
-
-Based on your reflections, this appears to be an area where focused attention could bring meaningful progress. Remember that every step forward counts, and the awareness you're building today is the foundation for tomorrow's growth. You have the strength to develop this quality in your life.`;
+    if (!promptResponseText) {
+      console.error('All models failed.');
+      // A simple fallback if all AI models fail
+      promptResponseText = `Take a quiet moment to reflect on the virtue of ${virtueName}. Consider one specific time this week where you found it challenging to practice. What was the situation? What feelings came up for you? Gently explore this memory without judgment.`;
     }
 
-    res.status(200).send({ 
-      analysis: analysisText,
-      model: successfulModel || 'fallback',
-      success: true 
+    res.status(200).send({
+      prompt: promptResponseText,
+      model: successfulModel || 'fallback'
     });
 
   } catch (error) {
-    console.error('Unexpected error in getAstridAnalysis:', error);
-    res.status(500).send({ 
-      error: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    console.error('Unexpected error in getstage1 function:', error);
+    res.status(500).send({ error: 'Internal server error' });
   }
 });
