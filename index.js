@@ -54,7 +54,14 @@ functions.http('getstage1', async (req, res) => {
     `;
 
     // --- Model Execution Logic (Unchanged) ---
-    const modelNames = ['gemini-1.5-flash', 'gemini-pro']; // Simplified model list for clarity
+    // Use gemini-2.5-flash-lite as primary, with fallbacks
+    const modelNames = [
+      'gemini-2.5-flash-lite',  // Primary model
+      'gemini-2.0-flash-lite',  // Fallback 1
+      'gemini-1.5-flash-lite',  // Fallback 2
+      'gemini-1.5-flash',       // Fallback 3
+      'gemini-pro'              // Final fallback
+    ];
     let promptResponseText = '';
     let successfulModel = '';
 
