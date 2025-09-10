@@ -7,7 +7,7 @@ const vertex_ai = new VertexAI({
   location: 'us-central1' 
 });
 
-functions.http('getAstridAnalysis', async (req, res) => {
+functions.http('getstage1', async (req, res) => {
   // Set CORS headers
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
