@@ -44,7 +44,7 @@ functions.http('getstage1', async (req, res) => {
       - **User's Writing Progress on Stage 1 So Far:** """${stage1MemoContent || "The user has not started writing for this stage yet."}"""
 
       **YOUR TASK:**
-      Based on ALL the information above, generate a thoughtful and encouraging prompt of about 250 words. Your response MUST do the following:
+      Based on ALL the information above, generate a thoughtful and encouraging prompt (limit 200 words). Your response MUST do the following:
       1.  Acknowledge the user's current position in their journey with this virtue, referencing the provided AI analysis of their character defects.
       2.  If the user has already written something, briefly acknowledge their progress and insights.
       3.  Gently guide their focus toward a specific character defect mentioned in the analysis. Explain how this specific defect acts as a barrier to practicing the virtue of ${virtueName}.
