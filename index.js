@@ -24,7 +24,7 @@ functions.http('getstage1', async (req, res) => {
       return res.status(400).send({ error: 'Invalid request body' });
     }
 
-    const { virtueName, virtueDef, characterDefectAnalysis, stage1MemoContent } = req.body;
+    const { virtueName, virtueDef, characterDefectAnalysis, stage1MemoContent, previousPrompts } = req.body;
 
     // Validate required fields
     if (!virtueName || !virtueDef || !characterDefectAnalysis) {
@@ -42,15 +42,32 @@ functions.http('getstage1', async (req, res) => {
       - **Virtue Definition:** ${virtueDef}
       - **AI Analysis of User's Character Defects:** "${characterDefectAnalysis}"
       - **User's Writing Progress on Stage 1 So Far:** """${stage1MemoContent || "The user has not started writing for this stage yet."}"""
+      - **Previous Prompts Given:** ${previousPrompts ? `"""${JSON.stringify(previousPrompts)}"""` : "No previous prompts for this virtue."}
+
+      **CRITICAL ASSESSMENT:** First, analyze the user's writing progress against ALL character defects identified in the analysis. Determine if the user has adequately addressed each defect by examining whether they have described:
+      1. The frequency/patterns of each defective behavior
+      2. Who has been harmed by each defect
+      3. The specific nature of that harm
+
+      **COMPLETION CHECK:** If ALL defects have been thoroughly explored with frequency, harm, and impact described, then acknowledge their completion of dismantling for this virtue and guide them toward readiness for the next stage.
+
+      **CRITICAL FOCUS:** If dismantling is incomplete, prioritize the highest-scoring character defects from the virtue assessment that have NOT been adequately addressed - these are the defects that most severely impact the calculated virtue score and represent the greatest barriers to practicing ${virtueName}.
 
       **YOUR TASK:**
       Based on ALL the information above, generate a thoughtful and encouraging prompt (limit 200 words). Your response MUST do the following:
-      1.  Acknowledge the user's current position in their journey with this virtue, referencing the provided AI analysis of their character defects.
-      2.  If the user has already written something, briefly acknowledge their progress and insights.
-      3.  Gently guide their focus toward a specific character defect mentioned in the analysis. Explain how this specific defect acts as a barrier to practicing the virtue of ${virtueName}.
-      4.  Conclude with a direct, open-ended question or a reflective task. This should encourage the user to explore a specific memory, feeling, or pattern of behavior related to that defect. The goal is to help them see the defect clearly without judgment.
 
-      Frame your response with empathy and wisdom. You are a trusted companion on their journey of self-discovery and growth. Refer to the user as "you".
+      ${stage1MemoContent ? 
+        `1. Acknowledge their existing writing progress and insights, referencing previous prompts if relevant.
+         2. Either: (a) If dismantling appears complete, congratulate them and suggest readiness for next stage, OR (b) Focus on the highest-scoring unaddressed character defect.
+         3. If incomplete, invite deeper exploration of the primary unaddressed defect through specific questions about frequency, who was harmed, and the nature of that harm.` 
+        : 
+        `1. Provide a brief overview of the dismantling process and its purpose.
+         2. Focus on the highest-scoring (most impactful) character defect from the analysis that most severely undermines ${virtueName}.
+         3. Invite them to begin writing about this primary defect, specifically exploring: the frequency of this behavior, who has been harmed by it, and the specific nature of that harm.`}
+
+      4. Conclude with direct, open-ended questions that encourage brutal honesty about their most damaging patterns, or celebrate completion if appropriate.
+
+      Frame your response with empathy and wisdom, acknowledging that we are more than our mistakes while inviting unflinching self-examination. Refer to the user as "you".
     `;
 
     // --- Model Execution Logic (Unchanged) ---
