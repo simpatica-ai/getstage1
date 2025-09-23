@@ -44,22 +44,27 @@ functions.http('getstage1', async (req, res) => {
       - **User's Writing Progress on Stage 1 So Far:** """${stage1MemoContent || "The user has not started writing for this stage yet."}"""
       - **Previous Prompts Given:** ${previousPrompts ? `"""${JSON.stringify(previousPrompts)}"""` : "No previous prompts for this virtue."}
 
-      **CRITICAL ASSESSMENT:** First, analyze the user's writing progress against ALL character defects identified in the analysis. Determine if the user has adequately addressed each defect by examining whether they have described:
+      **CRITICAL ASSESSMENT:** First, analyze the user's writing progress against ALL character defects identified in the analysis. For each defect, determine if the user has adequately addressed it by examining whether they have described:
       1. The frequency/patterns of each defective behavior
       2. Who has been harmed by each defect
       3. The specific nature of that harm
 
+      **DEFECT PROGRESSION LOGIC:** 
+      - If the highest-scoring defect has been thoroughly explored (frequency, harm, impact described), move to the next highest-scoring unaddressed defect
+      - If multiple defects remain unaddressed, prioritize by their impact on the virtue score
+      - Only when ALL defects have been adequately explored should dismantling be considered complete
+
       **COMPLETION CHECK:** If ALL defects have been thoroughly explored with frequency, harm, and impact described, then acknowledge their completion of dismantling for this virtue and guide them toward readiness for the next stage.
 
-      **CRITICAL FOCUS:** If dismantling is incomplete, prioritize the highest-scoring character defects from the virtue assessment that have NOT been adequately addressed - these are the defects that most severely impact the calculated virtue score and represent the greatest barriers to practicing ${virtueName}.
+      **CRITICAL FOCUS:** If dismantling is incomplete, prioritize the next unaddressed character defect by impact on virtue score. Focus on defects that have NOT been adequately explored yet, moving systematically through all defects that undermine ${virtueName}.
 
       **YOUR TASK:**
       Based on ALL the information above, generate a thoughtful and encouraging prompt (limit 200 words). Your response MUST do the following:
 
       ${stage1MemoContent ? 
         `1. Acknowledge their existing writing progress and insights, referencing previous prompts if relevant.
-         2. Either: (a) If dismantling appears complete, congratulate them and suggest readiness for next stage, OR (b) Focus on the highest-scoring unaddressed character defect.
-         3. If incomplete, invite deeper exploration of the primary unaddressed defect through specific questions about frequency, who was harmed, and the nature of that harm.` 
+         2. Either: (a) If dismantling appears complete for ALL defects, congratulate them and suggest readiness for next stage, OR (b) Focus on the next highest-scoring unaddressed character defect.
+         3. If incomplete, invite deeper exploration of the next unaddressed defect through specific questions about frequency, who was harmed, and the nature of that harm.` 
         : 
         `1. Provide a brief overview of the dismantling process and its purpose.
          2. Focus on the highest-scoring (most impactful) character defect from the analysis that most severely undermines ${virtueName}.
