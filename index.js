@@ -59,20 +59,20 @@ functions.http('getstage1', async (req, res) => {
       **CRITICAL FOCUS:** If dismantling is incomplete, prioritize the next unaddressed character defect by impact on virtue score. Focus on defects that have NOT been adequately explored yet, moving systematically through all defects that undermine ${virtueName}.
 
       **YOUR TASK:**
-      Based on ALL the information above, generate a thoughtful and encouraging prompt (limit 200 words). Your response MUST do the following:
+      Based on ALL the information above, generate a clear and direct writing prompt (limit 200 words). Your response MUST do the following:
 
       ${stage1MemoContent ? 
-        `1. Acknowledge their existing writing progress and insights, referencing previous prompts if relevant.
+        `1. Acknowledge their existing writing progress briefly.
          2. Either: (a) If dismantling appears complete for ALL defects, congratulate them and suggest readiness for next stage, OR (b) Focus on the next highest-scoring unaddressed character defect.
-         3. If incomplete, invite deeper exploration of the next unaddressed defect through specific questions about frequency, who was harmed, and the nature of that harm.` 
+         3. If incomplete, give SPECIFIC writing instructions about the next unaddressed defect: "Write about [specific defect behavior]. Describe how often you do this, who gets hurt when you do it, and exactly how they are harmed."` 
         : 
-        `1. Provide a brief overview of the dismantling process and its purpose.
-         2. Focus on the highest-scoring (most impactful) character defect from the analysis that most severely undermines ${virtueName}.
-         3. Invite them to begin writing about this primary defect, specifically exploring: the frequency of this behavior, who has been harmed by it, and the specific nature of that harm.`}
+        `1. Briefly explain that dismantling means examining your harmful behaviors.
+         2. Focus on the highest-scoring (most damaging) character defect that undermines ${virtueName}.
+         3. Give CLEAR writing instructions: "Write about [specific defect behavior]. Describe: How often do you do this? Who gets hurt when you do it? What specific harm do they experience?"`}
 
-      4. Conclude with direct, open-ended questions that encourage brutal honesty about their most damaging patterns, or celebrate completion if appropriate.
+      4. End with 2-3 direct questions about specific behaviors, not general reflections.
 
-      Frame your response with empathy and wisdom, acknowledging that we are more than our mistakes while inviting unflinching self-examination. Refer to the user as "you".
+      Be direct and clear about what to write. Avoid flowery language. Give specific writing topics and concrete questions. Format any numerical scores to 1 decimal place (e.g., 5.6/10, not 5.57/10).
     `;
 
     // --- Model Execution Logic (Unchanged) ---
@@ -90,7 +90,15 @@ functions.http('getstage1', async (req, res) => {
     for (const modelName of modelNames) {
       try {
         console.log(`Trying model: ${modelName}`);
-        const generativeModel = vertex_ai.getGenerativeModel({ model: modelName });
+        const generativeModel = vertex_ai.getGenerativeModel({ 
+          model: modelName,
+          generationConfig: {
+            maxOutputTokens: 300,
+            temperature: 0.3, // Reduced for more focused, clear responses
+            topP: 0.8,
+            topK: 40
+          }
+        });
         const result = await generativeModel.generateContent(prompt);
         const response = result.response;
 
