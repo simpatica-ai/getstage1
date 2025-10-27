@@ -58,6 +58,8 @@ functions.http('getstage1', async (req, res) => {
 
       **CRITICAL FOCUS:** If dismantling is incomplete, prioritize the next unaddressed character defect by impact on virtue score. Focus on defects that have NOT been adequately explored yet, moving systematically through all defects that undermine ${virtueName}.
 
+      **SPELLING AND GRAMMAR ARE VERY IMPORTANT.  Review all responses for spelling and grammar.
+
       **YOUR TASK:**
       Based on ALL the information above, generate a clear and direct writing prompt (limit 200 words). Your response MUST do the following:
 
