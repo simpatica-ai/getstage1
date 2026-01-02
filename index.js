@@ -44,10 +44,29 @@ functions.http('getstage1', async (req, res) => {
       
       **SPECIFIC DEFECTS FOR THIS VIRTUE (from user's assessment, ordered by severity):**
       ${specificDefects && specificDefects.length > 0 ? 
-        specificDefects.map((defect, index) => 
-          `${index + 1}. **${defect.name}** (Rating: ${defect.rating}/10, Harm Level: ${defect.harmLevel})
-             Definition: ${defect.definition || 'No definition available'}`
-        ).join('\n      ') 
+        specificDefects.map((defect, index) => {
+          const frequencyLabel = ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'][defect.rating - 1] || 'Unknown';
+          const harmLevel = defect.harmLevel || 'None';
+          
+          // Create a combined severity description
+          let severityDescription = '';
+          if (defect.rating >= 4 && (harmLevel === 'Severe' || harmLevel === 'Moderate')) {
+            severityDescription = 'High Priority - Frequent and Harmful';
+          } else if (defect.rating >= 4) {
+            severityDescription = 'Moderate Priority - Very Frequent';
+          } else if (harmLevel === 'Severe') {
+            severityDescription = 'Moderate Priority - Highly Harmful';
+          } else if (defect.rating >= 3 && harmLevel === 'Moderate') {
+            severityDescription = 'Moderate Priority - Regular and Harmful';
+          } else {
+            severityDescription = 'Lower Priority - Less Frequent or Harmful';
+          }
+          
+          return `${index + 1}. **${defect.name}** (${severityDescription})
+             You engage in this behavior: ${frequencyLabel}
+             Harm level to others: ${harmLevel}
+             Definition: ${defect.definition || 'No definition available'}`;
+        }).join('\n      ') 
         : 
         `No specific defect data available. Use general analysis: "${characterDefectAnalysis || 'No character defect analysis available.'}"`
       }
@@ -59,9 +78,9 @@ functions.http('getstage1', async (req, res) => {
 
       **DEFECT PROGRESSION LOGIC:** 
       ${specificDefects && specificDefects.length > 0 ? `
-      - Start with the highest-rated defect: **${specificDefects[0]?.name}** (${specificDefects[0]?.rating}/10)
+      - Start with the highest priority defect: **${specificDefects[0]?.name}** (${['never engage in', 'rarely engage in', 'sometimes engage in', 'often engage in', 'always engage in'][specificDefects[0]?.rating - 1] || 'engage in'} this behavior with ${specificDefects[0]?.harmLevel || 'unknown'} harm to others)
       - If that defect has been thoroughly explored, move to the next: **${specificDefects[1]?.name || 'No additional defects'}**
-      - Work systematically through all ${specificDefects.length} defects in order of severity
+      - Work systematically through all ${specificDefects.length} defects in order of priority
       - Only when ALL defects have been adequately explored should dismantling be considered complete
       ` : `
       - Focus on the most significant character defects that undermine ${virtueName}
@@ -85,7 +104,7 @@ functions.http('getstage1', async (req, res) => {
          3. Give CLEAR writing instructions: "Write about your pattern of [specific defect name]. Describe: How often do you engage in this behavior? Who gets hurt when you do this? What specific harm do they experience?"`}
 
       4. End with 2-3 direct questions about the specific defect behavior, not general reflections.
-      5. Reference the defect's rating (e.g., "Your assessment showed this as a ${specificDefects && specificDefects[0]?.rating || 'significant'}/10 concern") to provide context.
+      5. Reference the defect's assessment results using descriptive language (e.g., "Your assessment showed you often engage in this behavior, causing moderate harm to others") to provide meaningful context.
 
       Be direct and clear about what to write. Avoid flowery language. Give specific writing topics and concrete questions about the actual defects from their assessment.
     `;
