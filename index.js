@@ -107,11 +107,13 @@ functions.http('getstage1', async (req, res) => {
       - If ALL defects with significant ratings (3+) have been thoroughly explored, acknowledge completion
       - If only minor defects (rating 1-2) remain unaddressed, consider dismantling complete
       - Provide a clear statement: "You have now addressed X of Y significant defects for ${virtueName}"
+      - If 6 or more defects have been addressed, strongly consider completion
       
       **NEXT STEPS:**
-      - If dismantling is complete: Congratulate them warmly and suggest they're ready for Stage 2 (Rebuilding)
+      - If dismantling is complete: Congratulate them warmly and suggest they're ready for Stage 2 (Rebuilding). Say something like: "You have completed the dismantling phase for ${virtueName}. You've courageously examined [list the defects they addressed]. You're ready for Stage 2."
       - If defects remain: Focus ONLY on the highest-priority unaddressed defect - be specific about which one
       - Never circle back to defects already explored unless the user's writing was too vague
+      - If the user has written about a defect in their current memo, DO NOT ask about it again
 
       **SPELLING AND GRAMMAR ARE VERY IMPORTANT. Review all responses for spelling and grammar.**
 
@@ -183,14 +185,44 @@ functions.http('getstage1', async (req, res) => {
       promptResponseText = `Take a quiet moment to reflect on the virtue of ${virtueName}. Consider one specific time this week where you found it challenging to practice. What was the situation? What feelings came up for you? Gently explore this memory without judgment.`;
     }
 
+    // Determine which defect the AI is focusing on by analyzing the prompt text
+    let focusedDefect = null;
+    if (specificDefects && specificDefects.length > 0) {
+      // Check which defect name appears in the prompt (case-insensitive)
+      for (const defect of specificDefects) {
+        const defectPattern = new RegExp(`\\b${defect.name}\\b`, 'i');
+        if (defectPattern.test(promptResponseText)) {
+          focusedDefect = defect.name;
+          break; // Use the first match found
+        }
+      }
+      // If no specific defect found, default to first unaddressed one
+      if (!focusedDefect) {
+        focusedDefect = specificDefects[0]?.name;
+      }
+    }
+
+    // Enhanced completion detection
+    const completionPhrases = [
+      'completed the dismantling',
+      'ready for stage 2',
+      'ready for the next stage',
+      'completed dismantling',
+      'finished exploring',
+      'addressed all',
+      'thoroughly examined all',
+      'courageously examined'
+    ];
+    const isCompletionPrompt = completionPhrases.some(phrase => 
+      promptResponseText.toLowerCase().includes(phrase)
+    );
+
     res.status(200).send({
       prompt: promptResponseText,
       model: successfulModel || 'fallback',
       metadata: {
-        defectFocus: specificDefects && specificDefects.length > 0 ? specificDefects[0]?.name : null,
-        isCompletionPrompt: promptResponseText.toLowerCase().includes('completed') || 
-                           promptResponseText.toLowerCase().includes('ready for stage 2') ||
-                           promptResponseText.toLowerCase().includes('ready for the next stage')
+        defectFocus: focusedDefect,
+        isCompletionPrompt: isCompletionPrompt
       }
     });
 
