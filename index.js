@@ -24,7 +24,7 @@ functions.http('getstage1', async (req, res) => {
       return res.status(400).send({ error: 'Invalid request body' });
     }
 
-    const { virtueName, virtueDef, characterDefectAnalysis, stage1MemoContent, specificDefects } = req.body;
+    const { virtueName, virtueDef, characterDefectAnalysis, stage1MemoContent, specificDefects, previousPrompts } = req.body;
 
     // Validate required fields
     if (!virtueName || !virtueDef) {
@@ -42,7 +42,12 @@ functions.http('getstage1', async (req, res) => {
       - **Virtue Definition:** ${virtueDef}
       - **User's Writing Progress on Stage 1 So Far:** """${stage1MemoContent || "The user has not started writing for this stage yet."}"""
       
-      **SPECIFIC DEFECTS FOR THIS VIRTUE (from user's assessment, ordered by severity):**
+      **PREVIOUS PROMPTS GIVEN (to avoid repetition):**
+      ${previousPrompts && previousPrompts.length > 0 ? 
+        previousPrompts.map((p, i) => `${i + 1}. ${p.substring(0, 150)}...`).join('\n      ')
+        : 'No previous prompts - this is the first guidance for this virtue.'}
+      
+      **SPECIFIC DEFECTS FOR THIS VIRTUE (from user's assessment, ordered by priority):**
       ${specificDefects && specificDefects.length > 0 ? 
         specificDefects.map((defect, index) => {
           const frequencyLabel = ['Never', 'Rarely', 'Sometimes', 'Often', 'Always'][defect.rating - 1] || 'Unknown';
@@ -71,10 +76,20 @@ functions.http('getstage1', async (req, res) => {
         `No specific defect data available. Use general analysis: "${characterDefectAnalysis || 'No character defect analysis available.'}"`
       }
 
-      **CRITICAL ASSESSMENT:** Analyze the user's writing progress against the specific defects listed above. For each defect, determine if the user has adequately addressed it by examining whether they have described:
-      1. The frequency/patterns of this specific defective behavior
-      2. Who has been harmed by this specific defect
-      3. The specific nature of that harm
+      **CRITICAL ASSESSMENT:** Carefully analyze the user's writing against EACH specific defect listed above. For each defect, determine if it has been adequately addressed by checking if the user has described:
+      1. The frequency/patterns of this specific defective behavior (e.g., "I often lie to my spouse about...")
+      2. Who has been harmed by this specific defect (e.g., "My wife, my children...")
+      3. The specific nature of that harm (e.g., "They lost trust in me, felt betrayed...")
+      
+      **IMPORTANT:** A defect is only "addressed" if ALL THREE elements are present. Vague or general statements don't count.
+      
+      **DEFECT TRACKING:** Based on your analysis of their writing:
+      - Identify which defects from the list above have been FULLY addressed (all 3 elements present)
+      - Identify which defects have been PARTIALLY addressed (1-2 elements present)
+      - Identify which defects have NOT been addressed at all
+      - DO NOT ask about defects that are already fully addressed - move to the next unaddressed defect
+      
+      **AVOID REPETITION:** Review the previous prompts above. If you've already asked about a specific defect and the user has now addressed it, DO NOT ask about it again. Move to the next priority defect that hasn't been fully explored.
 
       **DEFECT PROGRESSION LOGIC:** 
       ${specificDefects && specificDefects.length > 0 ? `
@@ -87,7 +102,16 @@ functions.http('getstage1', async (req, res) => {
       - Work through each defect systematically based on the general analysis provided
       `}
 
-      **COMPLETION CHECK:** If ALL defects have been thoroughly explored with frequency, harm, and impact described, then acknowledge their completion of dismantling for this virtue and guide them toward readiness for the next stage.
+      **COMPLETION CHECK:** 
+      - Count how many defects are FULLY addressed vs. total defects
+      - If ALL defects with significant ratings (3+) have been thoroughly explored, acknowledge completion
+      - If only minor defects (rating 1-2) remain unaddressed, consider dismantling complete
+      - Provide a clear statement: "You have now addressed X of Y significant defects for ${virtueName}"
+      
+      **NEXT STEPS:**
+      - If dismantling is complete: Congratulate them warmly and suggest they're ready for Stage 2 (Rebuilding)
+      - If defects remain: Focus ONLY on the highest-priority unaddressed defect - be specific about which one
+      - Never circle back to defects already explored unless the user's writing was too vague
 
       **SPELLING AND GRAMMAR ARE VERY IMPORTANT. Review all responses for spelling and grammar.**
 
@@ -95,12 +119,13 @@ functions.http('getstage1', async (req, res) => {
       Based on ALL the information above, generate a clear and direct writing prompt (limit 200 words). Your response MUST do the following:
 
       ${stage1MemoContent ? 
-        `1. Acknowledge their existing writing progress briefly.
-         2. Either: (a) If dismantling appears complete for ALL defects, congratulate them and suggest readiness for next stage, OR (b) Focus on the next unaddressed defect from the list above.
-         3. If incomplete, give SPECIFIC writing instructions about the next unaddressed defect: "Write about your pattern of [specific defect name]. Describe how often you engage in this behavior, who gets hurt when you do this, and exactly how they are harmed."` 
+        `1. First, state which defects have been addressed and which remain (e.g., "You've thoroughly explored Lying and Deceit. Let's now focus on Manipulation.")
+         2. Either: (a) If ALL significant defects are addressed, congratulate them: "You have completed the dismantling phase for ${virtueName}. You've courageously examined [list defects]. You're ready for Stage 2." OR (b) Focus on the NEXT highest-priority unaddressed defect.
+         3. If incomplete, give SPECIFIC writing instructions about the next unaddressed defect: "Write about your pattern of [specific defect name]. Describe how often you engage in this behavior, who gets hurt when you do this, and exactly how they are harmed."
+         4. DO NOT repeat questions about defects already thoroughly addressed in their writing.` 
         : 
         `1. Briefly explain that dismantling means examining your harmful behaviors.
-         2. Focus on the highest-rated defect from the assessment: ${specificDefects && specificDefects[0]?.name || 'the most significant character defect'}.
+         2. Focus on the highest-priority defect from the assessment: ${specificDefects && specificDefects[0]?.name || 'the most significant character defect'}.
          3. Give CLEAR writing instructions: "Write about your pattern of [specific defect name]. Describe: How often do you engage in this behavior? Who gets hurt when you do this? What specific harm do they experience?"`}
 
       4. End with 2-3 direct questions about the specific defect behavior, not general reflections.
@@ -110,12 +135,14 @@ functions.http('getstage1', async (req, res) => {
     `;
 
     // --- Model Execution Logic (Unchanged) ---
-    // Use gemini-2.5-flash-lite as primary, with fallbacks
+    // Use latest Gemini models with fallbacks
     const modelNames = [
-      'gemini-2.5-flash-lite',  // Primary model
-      'gemini-2.0-flash-lite',  // Fallback 1
-      'gemini-1.5-flash-lite',  // Fallback 2
-      'gemini-1.5-flash',       // Fallback 3
+      'gemini-2.5-flash-lite',  // Primary model - proven stable
+      'gemini-2.5-flash',       // Fallback 1 - faster, more capable
+      'gemini-2.5-pro',         // Fallback 2 - highest capability
+      'gemini-2.0-flash',       // Fallback 3 - cost-effective
+      'gemini-2.0-flash-lite',  // Fallback 4 - ultra-efficient
+      'gemini-1.5-flash',       // Fallback 5 - legacy stable
       'gemini-pro'              // Final fallback
     ];
     let promptResponseText = '';
@@ -158,7 +185,13 @@ functions.http('getstage1', async (req, res) => {
 
     res.status(200).send({
       prompt: promptResponseText,
-      model: successfulModel || 'fallback'
+      model: successfulModel || 'fallback',
+      metadata: {
+        defectFocus: specificDefects && specificDefects.length > 0 ? specificDefects[0]?.name : null,
+        isCompletionPrompt: promptResponseText.toLowerCase().includes('completed') || 
+                           promptResponseText.toLowerCase().includes('ready for stage 2') ||
+                           promptResponseText.toLowerCase().includes('ready for the next stage')
+      }
     });
 
   } catch (error) {
