@@ -24,11 +24,39 @@ functions.http('getstage1', async (req, res) => {
       return res.status(400).send({ error: 'Invalid request body' });
     }
 
-    const { virtueName, virtueDef, characterDefectAnalysis, stage1MemoContent, specificDefects, previousPrompts } = req.body;
+    const { virtueName, virtueDef, characterDefectAnalysis, stage1MemoContent, specificDefects, previousPrompts, isStageComplete } = req.body;
 
     // Validate required fields
     if (!virtueName || !virtueDef) {
       return res.status(400).send({ error: 'Missing required fields: virtueName and virtueDef are required.' });
+    }
+
+    // If stage is marked complete, provide completion acknowledgment
+    if (isStageComplete) {
+      const completionPrompt = `
+        Congratulations on completing Stage 2 (Dismantling) for ${virtueName}! 
+        
+        You have courageously examined your character defects and their impact on yourself and others. This honest self-reflection is a crucial foundation for growth.
+        
+        ${stage1MemoContent ? `
+        **Your Reflection Summary:**
+        You've written thoughtfully about your struggles with ${virtueName}, acknowledging specific patterns of harmful behavior and their consequences. This level of honesty and self-awareness demonstrates real commitment to change.
+        ` : ''}
+        
+        **What's Next:**
+        You're now ready to move to Stage 3 (Building), where you'll focus on developing positive habits and practices that embody ${virtueName}. This is where transformation begins - moving from recognizing what to stop doing, to actively practicing what to start doing.
+        
+        Take a moment to acknowledge the courage it took to complete this stage. You've done important work here.
+      `;
+      
+      return res.status(200).send({
+        prompt: completionPrompt.trim(),
+        model: 'completion-acknowledgment',
+        metadata: {
+          defectFocus: null,
+          isCompletionPrompt: true
+        }
+      });
     }
 
     // --- STAGE 2 PROMPT (Defect Reflection / Dismantling) ---
