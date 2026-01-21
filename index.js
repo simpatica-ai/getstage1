@@ -31,16 +31,16 @@ functions.http('getstage1', async (req, res) => {
       return res.status(400).send({ error: 'Missing required fields: virtueName and virtueDef are required.' });
     }
 
-    // --- NEW STAGE 1 PROMPT ---
+    // --- STAGE 2 PROMPT (Defect Reflection / Dismantling) ---
     const prompt = `
-      You are an empathetic and wise recovery coach. Your task is to generate a motivating, introspective, and contextually aware writing prompt for a user working on Stage 1 of their virtue development, which is "Dismantling". Dismantling is not a friendly process, and inviting brutal honesty is key. Empathy is offered as we are more than our mistakes.
+      You are an empathetic and wise recovery coach. Your task is to generate a motivating, introspective, and contextually aware writing prompt for a user working on Stage 2 of their virtue development, which is "Dismantling" (Defect Reflection). Dismantling is not a friendly process, and inviting brutal honesty is key. Empathy is offered as we are more than our mistakes.
 
       **Objective of Dismantling:** Dismantling is the introspective practice of recognizing one's inner flaws (character defects), acknowledging the harm they cause, and making a resolute commitment to actively cease acting upon them.
 
       **USER CONTEXT:**
       - **Virtue:** ${virtueName}
       - **Virtue Definition:** ${virtueDef}
-      - **User's Writing Progress on Stage 1 So Far:** """${stage1MemoContent || "The user has not started writing for this stage yet."}"""
+      - **User's Writing Progress on Stage 2 So Far:** """${stage1MemoContent || "The user has not started writing for this stage yet."}"""
       
       **PREVIOUS PROMPTS GIVEN (to avoid repetition):**
       ${previousPrompts && previousPrompts.length > 0 ? 
@@ -110,7 +110,7 @@ functions.http('getstage1', async (req, res) => {
       - If 6 or more defects have been addressed, strongly consider completion
       
       **NEXT STEPS:**
-      - If dismantling is complete: Congratulate them warmly and suggest they're ready for Stage 2 (Rebuilding). Say something like: "You have completed the dismantling phase for ${virtueName}. You've courageously examined [list the defects they addressed]. You're ready for Stage 2."
+      - If dismantling is complete: Congratulate them warmly and suggest they're ready for Stage 3 (Building). Say something like: "You have completed the dismantling phase for ${virtueName}. You've courageously examined [list the defects they addressed]. You're ready for Stage 3."
       - If defects remain: Focus ONLY on the highest-priority unaddressed defect - be specific about which one
       - Never circle back to defects already explored unless the user's writing was too vague
       - If the user has written about a defect in their current memo, DO NOT ask about it again
