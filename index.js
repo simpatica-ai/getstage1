@@ -165,15 +165,11 @@ functions.http('getstage1', async (req, res) => {
     `;
 
     // --- Model Execution Logic (Unchanged) ---
-    // Use latest Gemini models with fallbacks
+    // Model fallback strategy (refreshed Oct 2026 — dropped retired 1.5/pro models)
     const modelNames = [
-      'gemini-2.5-flash-lite',  // Primary model - proven stable
-      'gemini-2.5-flash',       // Fallback 1 - faster, more capable
-      'gemini-2.5-pro',         // Fallback 2 - highest capability
-      'gemini-2.0-flash',       // Fallback 3 - cost-effective
-      'gemini-2.0-flash-lite',  // Fallback 4 - ultra-efficient
-      'gemini-1.5-flash',       // Fallback 5 - legacy stable
-      'gemini-pro'              // Final fallback
+      'gemini-2.5-flash-lite',  // Primary — current, cost-effective
+      'gemini-2.5-flash',       // Fallback 1 — more capable
+      'gemini-2.0-flash'        // Fallback 2 — not on retirement list
     ];
     let promptResponseText = '';
     let successfulModel = '';
