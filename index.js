@@ -169,7 +169,7 @@ functions.http('getstage1', async (req, res) => {
     const modelNames = [
       'gemini-2.5-flash-lite',  // Primary — current, cost-effective
       'gemini-2.5-flash',       // Fallback 1 — more capable
-      'gemini-2.0-flash'        // Fallback 2 — not on retirement list
+      'gemini-2.5-pro'          // Fallback 2 — available in-region (us-central1)
     ];
     let promptResponseText = '';
     let successfulModel = '';
