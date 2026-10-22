@@ -1,11 +1,19 @@
-const { VertexAI } = require('@google-cloud/vertexai');
+const { GoogleGenAI } = require('@google/genai');
 const functions = require('@google-cloud/functions-framework');
 
-// Initialize Vertex AI outside the handler for better performance
-const vertex_ai = new VertexAI({
-  project: 'new-man-app',
-  location: 'us-central1'
-});
+// ---- Vertex endpoint configuration (edit here for a regional/BAA switch) ----
+const GCP_PROJECT = 'new-man-app';
+const GCP_LOCATION = 'global'; // global endpoint required for Gemini 3.x; switch to a region (e.g. 'us-central1') for data residency / BAA
+// Model fallback chain (global endpoint). Primary first.
+const MODEL_NAMES = [
+  'gemini-3.5-flash',      // Primary
+  'gemini-3.1-flash-lite', // Fallback 1
+  'gemini-2.5-flash',      // Fallback 2 — temporary bridge until 2.5 retires
+];
+// ---------------------------------------------------------------------------
+
+// Initialize the GenAI client outside the handler for better performance
+const ai = new GoogleGenAI({ vertexai: true, project: GCP_PROJECT, location: GCP_LOCATION });
 
 functions.http('getstage1', async (req, res) => {
   // Set CORS headers
@@ -164,33 +172,27 @@ functions.http('getstage1', async (req, res) => {
       Be direct and clear about what to write. Avoid flowery language. Give specific writing topics and concrete questions about the actual defects from their assessment.
     `;
 
-    // --- Model Execution Logic (Unchanged) ---
-    // Model fallback strategy (refreshed Oct 2026 — dropped retired 1.5/pro models)
-    const modelNames = [
-      'gemini-2.5-flash-lite',  // Primary — current, cost-effective
-      'gemini-2.5-flash',       // Fallback 1 — more capable
-      'gemini-2.5-pro'          // Fallback 2 — available in-region (us-central1)
-    ];
+    // --- Model Execution Logic ---
     let promptResponseText = '';
     let successfulModel = '';
 
-    for (const modelName of modelNames) {
+    for (const modelName of MODEL_NAMES) {
       try {
         console.log(`Trying model: ${modelName}`);
-        const generativeModel = vertex_ai.getGenerativeModel({ 
+        const result = await ai.models.generateContent({
           model: modelName,
-          generationConfig: {
+          contents: prompt,
+          config: {
             maxOutputTokens: 300,
             temperature: 0.3, // Reduced for more focused, clear responses
             topP: 0.8,
             topK: 40
           }
         });
-        const result = await generativeModel.generateContent(prompt);
-        const response = result.response;
 
-        if (response.candidates && response.candidates[0] && response.candidates[0].content) {
-          promptResponseText = response.candidates[0].content.parts[0].text;
+        const text = result.text ?? result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text && text.trim().length > 0) {
+          promptResponseText = text;
           successfulModel = modelName;
           console.log(`Success with model: ${modelName}`);
           break;
