@@ -183,12 +183,18 @@ functions.http('getstage1', async (req, res) => {
           model: modelName,
           contents: prompt,
           config: {
-            maxOutputTokens: 300,
+            maxOutputTokens: 1024, // Raised: Gemini 3.x thinking tokens share this budget; 300 starved the visible answer
+            thinkingConfig: { thinkingBudget: 0 }, // Disable thinking so it doesn't consume the output budget
             temperature: 0.3, // Reduced for more focused, clear responses
             topP: 0.8,
             topK: 40
           }
         });
+
+        const finishReason = result.candidates?.[0]?.finishReason;
+        if (finishReason === 'MAX_TOKENS') {
+          console.warn(`getstage1: model ${modelName} response was truncated by the token cap (finishReason=MAX_TOKENS)`);
+        }
 
         const text = result.text ?? result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (text && text.trim().length > 0) {
